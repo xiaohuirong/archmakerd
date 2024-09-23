@@ -1,4 +1,5 @@
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+use clap::{Arg, Command as ClapCommand};
 use serde::{Deserialize, Serialize};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
@@ -170,6 +171,32 @@ async fn main() -> std::io::Result<()> {
     let mkarchqemu = MkArchQemu::new();
     let data = web::Data::new(mkarchqemu);
 
+    let matches = ClapCommand::new("MkArchQemu Server")
+        .version("1.0")
+        .author("Your Name <your.email@example.com>")
+        .about("Runs MkArchQemu build server")
+        .arg(
+            Arg::new("bind_address")
+                .short('b')
+                .long("bind")
+                .value_parser(clap::value_parser!(String))
+                .default_value("127.0.0.1")
+                .help("Bind address for the server"),
+        )
+        .arg(
+            Arg::new("port")
+                .short('p')
+                .long("port")
+                .value_parser(clap::value_parser!(u16))
+                .default_value("8080")
+                .help("Port number for the server"),
+        )
+        .get_matches();
+
+    let bind_address = matches.get_one::<String>("bind_address").unwrap();
+    let port = matches.get_one::<u16>("port").unwrap();
+    let addr = format!("{}:{}", bind_address, port);
+
     HttpServer::new(move || {
         App::new()
             .app_data(data.clone())
@@ -179,7 +206,7 @@ async fn main() -> std::io::Result<()> {
             .route("/get_last_output", web::get().to(get_last_output))
             .route("/run_command", web::post().to(run_command))
     })
-    .bind(("127.0.0.1", 8080))?
+    .bind(addr)?
     .run()
     .await
 }
