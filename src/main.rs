@@ -1,5 +1,4 @@
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
-use std::thread;
 mod config;
 mod mkarchqemu;
 use mkarchqemu::{MkArchQemu, MkArchQemuParams};
