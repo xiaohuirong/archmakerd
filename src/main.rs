@@ -37,10 +37,7 @@ async fn get_last_output(api_data: web::Data<MkArchQemu>) -> impl Responder {
 async fn run_command(api_data: web::Data<MkArchQemu>) -> impl Responder {
     log::info!("Received request to run command.");
     let api_clone = api_data.clone();
-    thread::spawn(move || {
-        log::info!("Executing command in background.");
-        api_clone.run_command();
-    });
+    api_clone.run_command();
     log::info!("Command is being executed.");
 
     HttpResponse::Ok().json(serde_json::json!({ "status": "command is being executed" }))
@@ -50,7 +47,7 @@ async fn run_command(api_data: web::Data<MkArchQemu>) -> impl Responder {
 async fn main() -> std::io::Result<()> {
     env_logger::init();
     log::info!("Starting the server...");
-    
+
     let mkarchqemu = MkArchQemu::new();
     let data = web::Data::new(mkarchqemu);
 

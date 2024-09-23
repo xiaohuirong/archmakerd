@@ -58,8 +58,11 @@ impl MkArchQemu {
     pub fn run_command(&self) {
         let stored_params = self.params.lock().unwrap();
         if let Some(params) = &*stored_params {
-            let mut status = self.status.lock().unwrap();
-            *status = JobStatus::Running;
+            // Set status to Running and drop the lock
+            {
+                let mut status = self.status.lock().unwrap();
+                *status = JobStatus::Running;
+            }
 
             let mut cmd = Command::new("/usr/bin/mkarchqemu");
             cmd.arg("-o").arg(&params.out_dir);
@@ -75,17 +78,27 @@ impl MkArchQemu {
 
             cmd.arg(&params.profile_dir);
 
-            match cmd.output() {
-                Ok(output) => {
-                    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                    let combined_output = format!("stdout: {}\nstderr: {}", stdout, stderr);
+            // Spawn the command and handle it asynchronously
+            let child = cmd.spawn();
+            match child {
+                Ok(child) => {
+                    // Use a separate thread to wait for the command to finish
+                    let last_output = self.last_output.clone();
+                    let status = self.status.clone();
 
-                    let mut last_output = self.last_output.lock().unwrap();
-                    *last_output = Some(combined_output);
+                    std::thread::spawn(move || {
+                        let output = child.wait_with_output().expect("Failed to wait on child");
+                        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+                        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                        let combined_output = format!("stdout: {}\nstderr: {}", stdout, stderr);
 
-                    let mut status = self.status.lock().unwrap();
-                    *status = JobStatus::Finished;
+                        // Update the last output and status
+                        let mut last_output = last_output.lock().unwrap();
+                        *last_output = Some(combined_output);
+
+                        let mut status = status.lock().unwrap();
+                        *status = JobStatus::Finished;
+                    });
                 }
                 Err(e) => {
                     let mut status = self.status.lock().unwrap();
@@ -97,4 +110,3 @@ impl MkArchQemu {
         }
     }
 }
-
