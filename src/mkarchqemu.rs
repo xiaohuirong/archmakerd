@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::process::Command;
 use std::sync::{Arc, Mutex};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct MkArchQemuParams {
     pub out_dir: String,
     pub work_dir: String,
@@ -11,7 +11,7 @@ pub struct MkArchQemuParams {
     pub profile_dir: String,
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub enum JobStatus {
     Waiting,
     Running,
